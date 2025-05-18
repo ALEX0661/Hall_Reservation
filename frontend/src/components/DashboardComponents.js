@@ -88,7 +88,7 @@ export function DashboardHeader() {
 }
 
 // Fixed bottom mobile navbar
-export function MobileNavbar() {
+export function MobileNavbar({ notificationCount = 0 }) {
   const location = useLocation();
   const { unreadCount } = useNotifications();
 
@@ -101,10 +101,10 @@ export function MobileNavbar() {
           className={`nav-item ${location.pathname === item.to ? 'active' : ''}`}
         >
           <div className="nav-icon">
-            {item.label === 'Notifications' && unreadCount > 0 ? (
+            {item.label === 'Notifications' && (unreadCount || notificationCount) > 0 ? (
               <div className="icon-with-badge">
                 {item.icon}
-                <span className="notification-badge">{unreadCount}</span>
+                <span className="notification-badge">{unreadCount || notificationCount}</span>
               </div>
             ) : (
               item.icon
@@ -118,18 +118,21 @@ export function MobileNavbar() {
 }
 
 // Grid of menu cards for dashboard
-export function MenuGrid() {
+export function MenuGrid({ notificationCount = 0, excludeDashboardIcon = false }) {
   const { unreadCount } = useNotifications();
+  const filteredItems = excludeDashboardIcon
+    ? menuItems.filter(item => item.to !== '/dashboard')
+    : menuItems;
 
   return (
     <div className="menu-grid">
-      {menuItems.map((item, idx) => (
+      {filteredItems.map((item, idx) => (
         <Link to={item.to} key={idx} className="menu-card">
           <div className="menu-icon">
-            {item.label === 'Notifications' && unreadCount > 0 ? (
+            {item.label === 'Notifications' && (unreadCount || notificationCount) > 0 ? (
               <div className="icon-with-badge">
                 {item.icon}
-                <span className="notification-badge">{unreadCount}</span>
+                <span className="notification-badge">{unreadCount || notificationCount}</span>
               </div>
             ) : (
               item.icon
