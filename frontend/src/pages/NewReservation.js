@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/api';
 import { Calendar, Clock, Info, PlusCircle, AlertCircle, Building, Package, X, CheckCircle, Search, AlertTriangle } from 'lucide-react';
@@ -14,13 +14,11 @@ export default function NewReservation() {
     start_datetime: '',
     end_datetime: '',
     resource_ids: [],
-    other_resources: [],
     description: ''
   });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [errors, setErrors] = useState({});
-  const [newResource, setNewResource] = useState('');
   const [resourceSearch, setResourceSearch] = useState('');
   
   // Modal states
@@ -156,7 +154,7 @@ export default function NewReservation() {
     let step = 0;
     if (data.hall_id && !currentErrors.hall_id) step++;
     if (data.start_datetime && data.end_datetime && !currentErrors.start_datetime && !currentErrors.end_datetime) step++;
-    if (data.resource_ids.length > 0 || data.other_resources.length > 0) step++;
+    if (data.resource_ids.length > 0) step++;
     if (data.description && !currentErrors.description) step++;
     setProgressStep(step);
   };
@@ -178,25 +176,6 @@ export default function NewReservation() {
         updatedResources.splice(index, 1);
       }
       return { ...prev, resource_ids: updatedResources };
-    });
-  };
-
-  const addCustomResource = (e) => {
-    e.preventDefault();
-    if (newResource.trim()) {
-      setData(prev => ({
-        ...prev,
-        other_resources: [...prev.other_resources, newResource.trim()]
-      }));
-      setNewResource('');
-    }
-  };
-
-  const removeCustomResource = (index) => {
-    setData(prev => {
-      const updatedResources = [...prev.other_resources];
-      updatedResources.splice(index, 1);
-      return { ...prev, other_resources: updatedResources };
     });
   };
 
@@ -281,7 +260,6 @@ export default function NewReservation() {
         start_datetime: data.start_datetime,
         end_datetime: data.end_datetime,
         resource_ids: data.resource_ids,
-        other_resources: data.other_resources.join(', '),
         description: data.description
       };
 
@@ -311,12 +289,10 @@ export default function NewReservation() {
       start_datetime: '',
       end_datetime: '',
       resource_ids: [],
-      other_resources: [],
       description: ''
     });
     setMsg('');
     setErrors({});
-    setNewResource('');
     setResourceSearch('');
     setProgressStep(0);
     setResetModalOpen(false);
@@ -475,50 +451,6 @@ export default function NewReservation() {
                     </div>
                   )) : (
                     <p className="no-resources">No resources match your search</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="form-field">
-                <label>
-                  <Package />
-                  Other Resources
-                </label>
-                <div className="custom-resources">
-                  <div className="custom-resource-input">
-                    <input
-                      type="text"
-                      value={newResource}
-                      onChange={(e) => setNewResource(e.target.value)}
-                      placeholder="Add a custom resource..."
-                      aria-label="Add custom resource"
-                    />
-                    <button
-                      type="button"
-                      className="add-resource-btn"
-                      onClick={addCustomResource}
-                      disabled={!newResource.trim()}
-                    >
-                      Add
-                    </button>
-                  </div>
-
-                  {data.other_resources.length > 0 && (
-                    <div className="custom-resources-list">
-                      {data.other_resources.map((resource, index) => (
-                        <div className="custom-resource-tag" key={index}>
-                          <span>{resource}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeCustomResource(index)}
-                            className="remove-resource-btn"
-                            aria-label={`Remove ${resource}`}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
                   )}
                 </div>
               </div>
@@ -685,10 +617,6 @@ export default function NewReservation() {
                   <div className="detail-item">
                     <Package size={16} />
                     <span>Resources: {data.resource_ids.map(id => resources.find(r => r.id === id)?.name).filter(Boolean).join(', ') || 'None'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <Package size={16} />
-                    <span>Other Resources: {data.other_resources.join(', ') || 'None'}</span>
                   </div>
                   <div className="detail-item">
                     <Info size={16} />

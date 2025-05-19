@@ -69,7 +69,7 @@ export function DashboardHeader() {
 
   return (
     <div className="dashboard-header">
-      <div className="header-content">
+      <div className="headers-content">
         {isDashboard && (
           <div className="avatar-circle">
             {getAvatarInitial()}

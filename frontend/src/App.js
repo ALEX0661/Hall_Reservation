@@ -17,7 +17,6 @@ import AdminUsers from './pages/AdminUsers';
 import AdminReservations from './pages/AdminReservations';
 import AdminResources from './pages/AdminResources';
 import AdminHalls from './pages/AdminHalls';
-import CalendarView from './pages/AdminCalendar';
 import AdminNotifications from './pages/AdminNotifications';
 
 function App() {
@@ -47,7 +46,6 @@ function App() {
             <Route path="/admin/reservations" element={<AdminReservations />} />
             <Route path="/admin/resources" element={<AdminResources />} />
             <Route path="/admin/halls" element={<AdminHalls />} />
-            <Route path="/admin/calendar" element={<CalendarView />} />
             <Route path="/admin/notifications" element={<AdminNotifications />} />
           </Route>
 
