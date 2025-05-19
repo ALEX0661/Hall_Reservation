@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+import logging
 
 from app.core.deps import get_current_active_user, get_current_admin_user
 from app.db.session import get_db
@@ -11,6 +12,10 @@ from app.schemas import (
     ReservationCreate, ReservationUpdate, ReservationOut, 
     ReservationWithHallOut, FeedbackCreate, FeedbackOut, FeedbackWithReservationOut
 )
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -32,6 +37,15 @@ def create_reservation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Validate hall existence
+    hall = db.query(Hall).filter(Hall.id == reservation.hall_id).first()
+    if not hall:
+        logger.error(f"Attempted to create reservation with invalid hall_id {reservation.hall_id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected hall does not exist"
+        )
+    
     try:
         return crud_reservation.create_reservation(
             db=db, user_id=current_user.id, res_in=reservation
@@ -75,7 +89,11 @@ def list_past_approved_reservations(
     
     for res in reservations:
         hall = db.query(Hall).filter(Hall.id == res.hall_id).first()
-        hall_name = hall.name if hall else "Unknown Hall"
+        hall_name = hall.name if hall else "Hall Unavailable"
+        hall_status = "active" if hall else "deleted"
+        
+        if not hall:
+            logger.warning(f"Past approved reservation {res.id} references missing hall_id {res.hall_id}")
         
         # Check if the reservation has ended
         if res.end_datetime <= current_time:
@@ -88,6 +106,7 @@ def list_past_approved_reservations(
                 "id": res.id,
                 "hall_id": res.hall_id,
                 "hall_name": hall_name,
+                "hall_status": hall_status,
                 "start_datetime": res.start_datetime,
                 "end_datetime": res.end_datetime,
                 "description": res.description,
@@ -175,6 +194,15 @@ def check_availability(
     db: Session = Depends(get_db)
 ):
     """Check if a time slot is available for reservation."""
+    # Validate hall existence
+    hall = db.query(Hall).filter(Hall.id == hall_id).first()
+    if not hall:
+        logger.error(f"Availability check failed: invalid hall_id {hall_id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected hall does not exist"
+        )
+    
     is_available = not crud_reservation.is_overlapping(
         db, 
         hall_id=hall_id, 

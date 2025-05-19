@@ -58,13 +58,14 @@ class ResourceOut(ResourceBase):
 # --- Halls ---
 class HallBase(BaseModel):
     name: str
-    capacity: int
+    capacity: Optional[int] = None
 
 class HallCreate(HallBase):
     pass
 
 class HallOut(HallBase):
     id: int
+    status: Optional[str] = "active"  # Added to indicate hall status (active/deleted)
     
     class Config:
         orm_mode = True
@@ -100,7 +101,7 @@ class ReservationOut(ReservationBase):
         orm_mode = True
 
 class ReservationWithHallOut(ReservationOut):
-    hall: HallOut
+    hall: Optional[HallOut]  # Made optional to handle missing halls
     
     class Config:
         orm_mode = True
@@ -132,7 +133,7 @@ class FeedbackOut(FeedbackBase):
         orm_mode = True
 
 class FeedbackWithReservationOut(FeedbackOut):
-    reservation: ReservationOut
+    reservation: Optional[ReservationWithHallOut]  # Made optional to handle missing reservations
     
     class Config:
         orm_mode = True

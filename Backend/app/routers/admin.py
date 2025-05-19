@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
+import logging
 
 from app.core.deps import get_current_admin_user
 from app.db.session import get_db
@@ -12,6 +13,10 @@ from app.schemas import (
     UserOut, FeedbackWithReservationOut,
     ResourceCreate, ResourceOut, HallCreate, HallOut
 )
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -97,7 +102,7 @@ def create_hall(
 @router.get("/reservations", response_model=List[dict])
 def list_all_reservations(
     status: Optional[str] = None,
-    start_date: Optional[datetime] = None,  # Filter by date range
+    start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     hall_id: Optional[int] = None,
     skip: int = 0,
@@ -106,8 +111,9 @@ def list_all_reservations(
     current_user: User = Depends(get_current_admin_user)
 ):
     """List all reservations with optional filters (admin only)."""
-    # Use a join to ensure user and hall are loaded
-    query = db.query(Reservation).join(User, Reservation.user_id == User.id).join(Hall, Reservation.hall_id == Hall.id)
+    from sqlalchemy import outerjoin
+    
+    query = db.query(Reservation).join(User, Reservation.user_id == User.id).outerjoin(Hall, Reservation.hall_id == Hall.id)
     
     if status:
         query = query.filter(Reservation.status == status)
@@ -119,13 +125,11 @@ def list_all_reservations(
         query = query.filter(Reservation.start_datetime >= start_date)
     
     if end_date:
-        # Add one day to include the full end date
         end_date_adjusted = end_date + timedelta(days=1)
         query = query.filter(Reservation.start_datetime <= end_date_adjusted)
     
     reservations = query.offset(skip).limit(limit).all()
     
-    # Convert to dictionaries with explicitly included relationships
     result = []
     for res in reservations:
         user_data = {
@@ -137,10 +141,11 @@ def list_all_reservations(
         } if res.user else None
         
         hall_data = {
-            "id": res.hall.id,
-            "name": res.hall.name,
-            "capacity": res.hall.capacity if hasattr(res.hall, 'capacity') else None
-        } if res.hall else None
+            "id": res.hall_id,
+            "name": res.hall.name if res.hall else "Hall Unavailable",
+            "capacity": res.hall.capacity if res.hall else None,
+            "status": "active" if res.hall else "deleted"
+        }
         
         result.append({
             "id": res.id,
@@ -153,6 +158,9 @@ def list_all_reservations(
             "user": user_data,
             "hall": hall_data
         })
+        
+        if not res.hall:
+            logger.warning(f"Reservation {res.id} references missing hall_id {res.hall_id}")
     
     return result
 
@@ -236,30 +244,27 @@ async def get_calendar_events(
 ):
     """Get a list of approved reservations for calendar display"""
     
-    # Use the string constant directly instead of the enum
-    # This avoids potential issues with enum imports
     APPROVED_STATUS = "APPROVED"
     
-    # Build the base query using the string value directly
     query = db.query(Reservation).filter(
         Reservation.status == APPROVED_STATUS,
         Reservation.start_datetime >= start_date,
         Reservation.end_datetime <= end_date
     )
     
-    # Apply hall filter if provided
     if hall_id is not None:
         query = query.filter(Reservation.hall_id == hall_id)
     
-    # Execute query and fetch reservations
     reservations = query.all()
     
-    # Format the results for calendar display
     events = []
     for res in reservations:
-        # Get the hall name
         hall = db.query(Hall).filter(Hall.id == res.hall_id).first()
-        hall_name = hall.name if hall else "Unknown Hall"
+        hall_name = hall.name if hall else "Hall Unavailable"
+        hall_status = "active" if hall else "deleted"
+        
+        if not hall:
+            logger.warning(f"Calendar event for reservation {res.id} references missing hall_id {res.hall_id}")
         
         events.append({
             "id": res.id,
@@ -267,7 +272,8 @@ async def get_calendar_events(
             "start": res.start_datetime.isoformat(),
             "end": res.end_datetime.isoformat(),
             "user_id": res.user_id,
-            "hall_id": res.hall_id
+            "hall_id": res.hall_id,
+            "hall_status": hall_status
         })
     
     return events
