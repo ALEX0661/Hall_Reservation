@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom'; // Add this import
 import API from '../api/api';
 import { format } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz'; // Add this import
+import { toZonedTime } from 'date-fns-tz';
 import { 
   Calendar, 
   Clock, 
@@ -247,9 +248,9 @@ const EmptyState = () => (
     </div>
     <h3>No Reservations Yet</h3>
     <p>You don't have any reservations. Create your first one to get started.</p>
-    <a href="/reservations/new" className="btn btn-primary">
+    <Link to="/reservations/new" className="btn btn-primary">
       Create New Reservation
-    </a>
+    </Link>
   </div>
 );
 
@@ -660,10 +661,10 @@ export default function ReservationList() {
             <button onClick={clearFilters} className="btn btn-secondary">
               Clear Filters
             </button>
-            <a href="/reservations/new" className="btn btn-primary btn-with-icon">
+            <Link to="/reservations/new" className="btn btn-primary btn-with-icon">
               <Calendar size={18} />
               <span>New Reservation</span>
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -677,7 +678,7 @@ export default function ReservationList() {
 
         {success && (
           <Alert 
-            type="success" 
+            type="message" 
             message={success} 
             onClose={clearAlert}
           />
